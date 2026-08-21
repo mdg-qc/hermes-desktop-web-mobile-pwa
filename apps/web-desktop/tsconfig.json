@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2023"],
+    "types": ["node"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["../desktop/src/*"],
+      "@/debug/dev-only": ["./src/debug-dev-only.ts"],
+      "@/debug/*": ["./src/debug-dev-only.ts"],
+      "@hermes/plugin-sdk": ["../desktop/src/sdk/index.ts"],
+      "@hermes/shared/billing": ["../shared/src/billing-types.ts"],
+      "@hermes/shared/billing-policy": ["../shared/src/billing-policy.ts"],
+      "@hermes/shared/charge-settlement": ["../shared/src/charge-settlement.ts"],
+      "@hermes/shared/skin": ["../shared/src/skin.ts"],
+      "@hermes/shared": ["../shared/src/index.ts"]
+    }
+  },
+  "include": ["src", "../desktop/src", "../shared/src"],
+  "exclude": [
+    "../desktop/src/debug/**",
+    "../desktop/src/**/*.test.ts",
+    "../desktop/src/**/*.test.tsx",
+    "../desktop/src/**/*.test-d.ts",
+    "../desktop/src/**/*.spec.ts",
+    "../desktop/src/**/*.spec.tsx",
+    "../shared/src/**/*.test.ts",
+    "../shared/src/**/*.test-d.ts"
+  ]
+}

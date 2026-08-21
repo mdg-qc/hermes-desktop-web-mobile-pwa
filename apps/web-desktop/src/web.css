@@ -1,0 +1,9 @@
+/* Tailwind v4 scans for utility class names relative to the Vite root
+   (apps/web-desktop). The renderer sources live OUTSIDE that root in
+   apps/desktop/src, so without this the compiler emits only a handful of
+   utilities and the layout collapses. `@source` adds the upstream renderer
+   tree to the scan — the additive, pull-safe alternative to copying the
+   sources into this workspace (which is what hermes-ui does).
+   The @import pulls in the upstream stylesheet itself, untouched. */
+@source "../../desktop/src";
+@import "../../desktop/src/styles.css";

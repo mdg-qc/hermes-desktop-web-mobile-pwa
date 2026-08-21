@@ -1,0 +1,21 @@
+# Only web-desktop is a pnpm workspace here — desktop/shared are SOURCE files
+# supplied by the flake input at build/dev time, never pnpm projects. Keeping
+# the workspace to one project makes pnpm-lock.yaml stable across upstream
+# commits (no importers that drift with the pinned hermes-agent input).
+packages:
+  - apps/web-desktop
+
+# pnpm 11 blocks postinstall build scripts by default; approve the ones the
+# web closure needs.
+onlyBuiltDependencies:
+  - esbuild
+  - "@tailwindcss/oxide"
+
+# Hoisted node_modules layout — our vite config aliases expect react etc. at
+# the repo-root node_modules (same shape as npm).
+nodeLinker: hoisted
+
+allowBuilds:
+  get-windows: false
+  node-pty: false
+  unicode-animations: false

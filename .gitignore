@@ -1,0 +1,15 @@
+# Hermes Web (hermes-mobile) — root ignore
+node_modules/
+dist/
+result/
+.env
+*.log
+
+# Renderer sources mounted by `nix develop` from the pinned upstream input
+# (never committed — they come from the flake input at dev/build time).
+apps/desktop
+apps/shared
+
+# Web build artifacts
+apps/web-desktop/dist/
+apps/web-desktop/logs/
