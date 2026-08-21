@@ -13,3 +13,5 @@ apps/shared
 # Web build artifacts
 apps/web-desktop/dist/
 apps/web-desktop/logs/
+
+/result
