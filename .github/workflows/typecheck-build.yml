@@ -1,0 +1,32 @@
+name: typecheck-build
+
+# Build Hermes Web on GitHub so the VPS never runs a local build. Mirrors what
+# deploy.sh does (`nix build .#`) but only verifies compilation — it does NOT
+# deploy and does not touch the running site on :4174 (that serves from
+# ~/.hermes/desktop-web, outside this repo).
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      # tsc is NOT run by the vite build, so run it explicitly (same dev shell
+      # the skill documents). pnpm install pulls the dependency closure; the
+      # fitler in flake.nix drops node_modules from the build source anyway.
+      - name: Typecheck
+        run: |
+          nix develop -c pnpm install --frozen-lockfile
+          nix develop -c pnpm --filter web-desktop run typecheck
+
+      # Production build = compile proof, exactly the artifact deploy.sh copies.
+      - name: Build web dist
+        run: nix build .#packages.x86_64-linux.default

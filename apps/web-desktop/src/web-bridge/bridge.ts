@@ -76,6 +76,127 @@ const unsubscribed = (): (() => void) => noop
 const pluginRoots = () => [`${servingBase()}/desktop-plugins`, `${servingBase()}/plugins`]
 
 /**
+ * Browser-file registry. The renderer is path-based: in Electron it reads a
+ * file off disk by absolute path. A browser has no paths — only File/Blob
+ * objects from `<input type=file>`, drop/paste events and the clipboard — so
+ * we register those blobs under a synthetic handle (`web-file://<n>`, a shape
+ * the renderer accepts anywhere a path is expected) and answer
+ * readFileDataUrl / readFileDataUrlForAttach by resolving the handle back to
+ * the blob and reading its bytes. The same "memory file" idea as the plugin
+ * mechanism (same-origin fetch), but for blobs held by the page instead of
+ * served paths.
+ */
+let webFileSeq = 0
+const webFiles = new Map<string, Blob>()
+const WEB_FILE_PREFIX = 'web-file://'
+
+function isWebFileHandle(path: string): boolean {
+  return path.startsWith(WEB_FILE_PREFIX)
+}
+
+function registerWebFile(blob: Blob): string {
+  const handle = `${WEB_FILE_PREFIX}${++webFileSeq}`
+  webFiles.set(handle, blob)
+  return handle
+}
+
+function webFileAsDataUrl(handle: string): Promise<string> {
+  const blob = webFiles.get(handle)
+
+  if (!blob) {
+    return Promise.reject(new Error(`local file access is unavailable in the web app (${handle})`))
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('Failed to read browser file'))
+    reader.readAsDataURL(blob)
+  })
+}
+
+/** Read the first image off the clipboard, if any (modern Chromium Clipboard
+ *  API). Returns null when there is none or permission is denied. */
+async function clipboardImageAsFile(): Promise<null | Blob> {
+  try {
+    if (!navigator.clipboard?.read) {
+      return null
+    }
+
+    const items = await navigator.clipboard.read()
+
+    for (const item of items) {
+      const type = item.types.find(t => t.startsWith('image/'))
+
+      if (type) {
+        const blob = await item.getType(type)
+
+        if (blob && blob.size > 0) {
+          return blob
+        }
+      }
+    }
+  } catch {
+    // Permission denied / clipboard not focused — behave as "no image".
+  }
+
+  return null
+}
+
+// Persistent hidden <input type=file> backing selectPaths. We reuse one
+// element (retargeting `accept`/`multiple` per call) so the picker always
+// opens inside a plain user gesture without rebuilding DOM nodes.
+let fileInputEl: null | HTMLInputElement = null
+
+function ensureFileInput(): HTMLInputElement {
+  if (!fileInputEl) {
+    fileInputEl = document.createElement('input')
+    fileInputEl.type = 'file'
+    fileInputEl.style.display = 'none'
+    document.body.appendChild(fileInputEl)
+  }
+
+  return fileInputEl
+}
+
+/** Open the native picker and resolve to the chosen files ([] on cancel).
+ *  input.click() must stay inside the triggering click's user-gesture window;
+ *  the Promise executor runs synchronously, so it does. */
+function pickWithInput(input: HTMLInputElement): Promise<File[]> {
+  input.value = '' // allow re-selecting the same file
+
+  return new Promise(resolve => {
+    let settled = false
+
+    input.addEventListener('change', onChange)
+    input.addEventListener('cancel', onCancel)
+    input.click()
+
+    function onChange(): void {
+      if (settled) return
+      settled = true
+      input.removeEventListener('change', onChange)
+      input.removeEventListener('cancel', onCancel)
+      resolve(Array.from(input.files ?? []))
+    }
+
+    function onCancel(): void {
+      if (settled) return
+      settled = true
+      input.removeEventListener('change', onChange)
+      input.removeEventListener('cancel', onCancel)
+      resolve([])
+    }
+  })
+}
+
+/** Map Electron-style `filters[].extensions` to the browser `accept` list. */
+function acceptsFor(filters?: Array<{ extensions: string[] }>): string {
+  return (filters ?? []).flatMap(f => f.extensions).map(ext => `.${ext.toLowerCase()}`).join(',')
+}
+
+/**
  * The bridge always operates on the ACTIVE gateway (see `./gateways`). This is
  * the adapter shape the connection-config methods below speak; it is derived
  * from, and written back to, the active gateway entry.
@@ -431,15 +552,6 @@ async function webNotify(payload: HermesNotification): Promise<boolean> {
   return true
 }
 
-function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  setTimeout(() => URL.revokeObjectURL(url), 10_000)
-}
-
 /**
  * Everything the web build supports. `terminal`, `git` and `zoom` are
  * intentionally absent: their consumers probe for bridge presence and
@@ -657,10 +769,18 @@ export function createWebBridge(): Window['hermesDesktop'] {
         return false
       }
     },
-    readFileDataUrl: async () => {
+    readFileDataUrl: async filePath => {
+      if (isWebFileHandle(filePath)) {
+        return webFileAsDataUrl(filePath)
+      }
+
       throw new Error('local file access is unavailable in the web app')
     },
-    readFileDataUrlForAttach: async () => {
+    readFileDataUrlForAttach: async filePath => {
+      if (isWebFileHandle(filePath)) {
+        return webFileAsDataUrl(filePath)
+      }
+
       throw new Error('local file access is unavailable in the web app')
     },
     dataUrlReadMax: {
@@ -680,7 +800,23 @@ export function createWebBridge(): Window['hermesDesktop'] {
 
       return { path: filePath, text }
     },
-    selectPaths: async () => [],
+    selectPaths: async options => {
+      if (options?.directories) {
+        // Folders have no single byte payload a remote gateway can stage
+        // (`@folder:` refs point at a server-side path); keep the picker
+        // file-only rather than emitting a ref to an unreadable handle.
+        return []
+      }
+
+      const input = ensureFileInput()
+      input.multiple = options?.multiple !== false
+      input.webkitdirectory = false
+      input.accept = acceptsFor(options?.filters)
+
+      const files = await pickWithInput(input)
+
+      return files.map(file => registerWebFile(file))
+    },
     selectSavePath: async () => null,
     readClipboard: async () => {
       try {
@@ -705,13 +841,17 @@ export function createWebBridge(): Window['hermesDesktop'] {
     },
     saveImageBuffer: async (data, ext) => {
       const bytes = data instanceof Uint8Array ? (data as Uint8Array<ArrayBuffer>) : new Uint8Array(data)
-      const filename = `hermes-image.${ext}`
-      downloadBlob(new Blob([bytes]), filename)
+      const extClean = ext.replace(/^\./, '').toLowerCase()
+      const mime = extClean === 'jpg' ? 'image/jpeg' : `image/${extClean}`
 
-      return filename
+      return registerWebFile(new Blob([bytes], { type: mime }))
     },
-    saveClipboardImage: async () => '',
-    getPathForFile: () => '',
+    saveClipboardImage: async () => {
+      const blob = await clipboardImageAsFile()
+
+      return blob ? registerWebFile(blob) : ''
+    },
+    getPathForFile: file => registerWebFile(file),
     normalizePreviewTarget: async () => null,
     watchPreviewFile: async url => ({ id: '', path: url }),
     watchDirectory: async dir => ({ id: '', path: dir }),
