@@ -94,10 +94,36 @@ function isWebFileHandle(path: string): boolean {
   return path.startsWith(WEB_FILE_PREFIX)
 }
 
-function registerWebFile(blob: Blob): string {
-  const handle = `${WEB_FILE_PREFIX}${++webFileSeq}`
+function registerWebFile(blob: Blob, name?: string): string {
+  const seq = ++webFileSeq
+  const filename = sanitizeWebFileName(name || mimeToFilename(blob.type, `file${seq}`))
+  const handle = `${WEB_FILE_PREFIX}${seq}/${filename}`
   webFiles.set(handle, blob)
   return handle
+}
+
+/** Derive a sane default filename from a blob MIME (the renderer's pathLabel
+ *  shows the last path segment and imageFilenameFromPath uses it for the
+ *  gateway upload name), so a clipboard paste isn't labelled by a bare number. */
+function mimeToFilename(type: string, fallback: string): string {
+  const m = /^image\/([\w+-]+)/.exec(type || '')
+
+  if (m) {
+    const ext = m[1].toLowerCase()
+
+    return `image.${ext === 'jpeg' ? 'jpg' : ext}`
+  }
+
+  return fallback
+}
+
+/** A browser File name never contains a path separator, but guard anyway so
+ *  pathLabel() always extracts exactly one segment — the real filename. Kept
+ *  short so an over-long name can't produce an unwieldy handle. */
+function sanitizeWebFileName(name: string): string {
+  const clean = name.replace(/[\\/]/g, '_').replace(/\s+/g, ' ').trim().replace(/^\.+/, '')
+
+  return clean.slice(0, 120) || 'file'
 }
 
 function webFileAsDataUrl(handle: string): Promise<string> {
@@ -815,7 +841,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
 
       const files = await pickWithInput(input)
 
-      return files.map(file => registerWebFile(file))
+      return files.map(file => registerWebFile(file, file.name))
     },
     selectSavePath: async () => null,
     readClipboard: async () => {
@@ -844,14 +870,14 @@ export function createWebBridge(): Window['hermesDesktop'] {
       const extClean = ext.replace(/^\./, '').toLowerCase()
       const mime = extClean === 'jpg' ? 'image/jpeg' : `image/${extClean}`
 
-      return registerWebFile(new Blob([bytes], { type: mime }))
+      return registerWebFile(new Blob([bytes], { type: mime }), `image.${extClean}`)
     },
     saveClipboardImage: async () => {
       const blob = await clipboardImageAsFile()
 
       return blob ? registerWebFile(blob) : ''
     },
-    getPathForFile: file => registerWebFile(file),
+    getPathForFile: file => registerWebFile(file, file.name),
     normalizePreviewTarget: async () => null,
     watchPreviewFile: async url => ({ id: '', path: url }),
     watchDirectory: async dir => ({ id: '', path: dir }),
