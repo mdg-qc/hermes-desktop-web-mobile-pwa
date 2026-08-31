@@ -199,20 +199,30 @@ function pickWithInput(input: HTMLInputElement): Promise<File[]> {
     input.addEventListener('cancel', onCancel)
     input.click()
 
-    function onChange(): void {
+    // Some mobile / webview pickers never fire `cancel`, which would leave this
+    // pending forever. Fall back to [] if nothing settles in time — far longer
+    // than any real selection, so it only guards against the missed-cancel leak.
+    const pendingTimer = setTimeout(fallback, 120_000)
+
+    function settle(files: File[]): void {
       if (settled) return
       settled = true
+      clearTimeout(pendingTimer)
       input.removeEventListener('change', onChange)
       input.removeEventListener('cancel', onCancel)
-      resolve(Array.from(input.files ?? []))
+      resolve(files)
+    }
+
+    function onChange(): void {
+      settle(Array.from(input.files ?? []))
     }
 
     function onCancel(): void {
-      if (settled) return
-      settled = true
-      input.removeEventListener('change', onChange)
-      input.removeEventListener('cancel', onCancel)
-      resolve([])
+      settle([])
+    }
+
+    function fallback(): void {
+      settle([])
     }
   })
 }
