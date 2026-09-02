@@ -971,13 +971,28 @@ export function createWebBridge(): Window['hermesDesktop'] {
     cancelBootstrap: async () => ({ ok: true, cancelled: true }),
     continueBootstrapLocal: async () => ({ ok: true }),
     onBootstrapEvent: unsubscribed,
-    getVersion: async () => ({
-      appVersion: '0.1.0-web',
-      electronVersion: '',
-      nodeVersion: '',
-      platform: 'web',
-      hermesRoot: ''
-    }),
+    getVersion: async () => {
+      // Report the RUNNING gateway's version (from /api/status) so the web
+      // client always matches Hermes Desktop — both answer to the same
+      // gateway, so this stays in sync without manual version bumps.
+      let appVersion = ''
+      try {
+        const status = await fetchStatus(baseUrl(), activeUpstreamOrigin())
+        if (status?.version) {
+          appVersion = status.version
+        }
+      } catch {
+        // Gateway unreachable → leave blank; the UI falls back to the
+        // "version unavailable" state.
+      }
+      return {
+        appVersion,
+        electronVersion: '',
+        nodeVersion: '',
+        platform: 'web',
+        hermesRoot: ''
+      }
+    },
     getRemoteDisplayReason: async () => null,
     updates: {
       check: async () => ({ supported: false }),
