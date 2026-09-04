@@ -1,14 +1,21 @@
 name: docker-build
 
 # Build the Hermes Web frontend Docker image and publish to GHCR. The build is
-# NIX-FREE: the Dockerfile fetches the pinned renderer from flake.lock and
-# builds with plain pnpm — so it works as a normal `docker build` in CI and
-# locally. The container only serves static files + proxies to a gateway.
+# NIX-FREE: the Dockerfile fetches the renderer from the LATEST upstream
+# hermes-agent (HERMES_RENDERER_REV, default main) and builds with plain pnpm —
+# a normal `docker build` in CI and locally. The container only serves static
+# files + proxies to a gateway.
+#
+# Triggers: push to main, v* tags, manual dispatch, AND a DAILY 05:00 UTC build
+# so the image keeps tracking new upstream hermes-agent even with no pushes.
 
 on:
   push:
     branches: [main]
     tags: ['v*']
+  schedule:
+    # Rebuild every day at 05:00 UTC to pick up the latest upstream hermes-agent.
+    - cron: '0 5 * * *'
   workflow_dispatch:
 
 jobs:
