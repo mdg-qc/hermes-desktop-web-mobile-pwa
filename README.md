@@ -1,3 +1,8 @@
+> ⚠️ **Unofficial** — not affiliated with, endorsed by, or a part of the official
+> `NousResearch/hermes-agent` repository. **The code is AI‑generated** (by the
+> Hermes agent on DeepSeek V4 Flash) and reviewed **only by AI** — use at your
+> own risk.
+
 # Hermes Desktop — Web & Mobile (PWA) Version
 
 The **Hermes Desktop chat UI** as a web app / PWA, plus a **Docker image**. The renderer always builds from the latest `hermes-agent`.
