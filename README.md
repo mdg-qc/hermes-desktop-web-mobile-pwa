@@ -3,30 +3,24 @@
 > Hermes agent on DeepSeek V4 Flash) and reviewed **only by AI** — use at your
 > own risk.
 
-# Hermes Desktop — Web & Mobile (PWA) Version
+# Hermes Desktop — Web / Mobile (PWA) Version
 
-The **Hermes Desktop chat UI** as a web app / PWA, plus a **Docker image**. The renderer always builds from the latest `hermes-agent`.
-
-> **⚠ Unofficial community version** — this project is **not affiliated with,
-> endorsed by, or a part of** the official `NousResearch/hermes-agent`
-> repository. It simply wraps the existing renderer code from that repo and
-> minimally adapts it to run as a web & mobile (PWA) app.
+The Hermes Desktop chat UI, repackaged as a web app and installable PWA, plus a
+Docker image. At build time the renderer is pulled from the latest
+`hermes-agent`.
 
 ## Provenance & intended use
 
-- **AI‑generated.** The entire code in this repo was written by the **Hermes
-  agent** (running on **DeepSeek V4 Flash**), and any code review was performed
-  **only by the AI agent** — it has not been reviewed by a human.
-- **Private network only.** This project is meant for use on a **private
-  network (Tailscale / tailnet)** and has **not been hardened or adapted for
-  public HTTPS exposure**. Do not deploy it on the public internet as‑is.
-- **Personal use.** The current state fulfils personal/private use; no further
-  hardening or public‑facing adaptation is intended.
+- **AI‑generated.** Every line in this repo was written by the Hermes agent
+  (running on DeepSeek V4 Flash) and reviewed only by that same AI. No human
+  has looked at the code.
+- **Private network only.** Built for Tailscale / tailnet. It has not been
+  hardened for public HTTPS, so don't put it on the open internet as is.
+- **Personal use.** The current state is enough for private, self‑hosted use.
 
-This repo contains **only the web code** (`apps/web-desktop`) plus a **nix
-flake** — the hermes-agent renderer sources are fetched by nix (pinned in
-`flake.lock`) at build/dev time. There is no clone, no `git pull`; updating
-upstream is one command.
+The repo holds only the web code (`apps/web-desktop`) plus a nix flake. The
+hermes-agent renderer is fetched by nix from `flake.lock` at build/dev time:
+no clone, no `git pull`, and updating upstream is one command.
 
 ## Structure
 
@@ -118,11 +112,12 @@ image they are served straight from `HERMES_HOME`.
 
 ## Docker (frontend image)
 
-A self-contained **nix-free** frontend image — a plain `docker build` with no nix
-and no build tools in the runtime. Build stage fetches the hermes-agent
-renderer (`apps/desktop`, `apps/shared`) at the commit `HERMES_RENDERER_REV`
-(default = the rev pinned in `flake.lock`) and builds with pnpm; the runtime is
-`nginx` serving the static dist + a same-origin proxy to a Hermes gateway.
+A nix-free frontend image that needs nothing but `docker build`. There are no
+build tools in the runtime. The build fetches the hermes-agent renderer
+(`apps/desktop`, `apps/shared`) at `HERMES_RENDERER_REV` (default `main`, so the
+latest upstream; pin a commit or tag for reproducible builds) and compiles it
+with pnpm. The runtime is a lean `nginx` that serves the static dist and proxies
+to a Hermes gateway.
 
 ```bash
 # build (primary path — plain docker build, no nix)
@@ -162,6 +157,6 @@ and `v*` tags. Build context is excluded of `.env`, `node_modules`, `dist`,
 
 ## Git model
 
-This repo is meant to be committed (flake requires git-tracked files) — e.g.
-your own fork or a fresh repo. Upstream never touches these paths, so nothing
-here conflicts with anything.
+The repo is meant to be committed (a flake needs git-tracked sources), for
+example under your own fork or a fresh repo. Upstream never writes to these
+paths, so nothing conflicts.
