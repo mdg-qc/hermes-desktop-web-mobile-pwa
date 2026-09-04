@@ -52,11 +52,24 @@ http {
             alias ${HERMES_HOME}/plugins/;
         }
 
-        # Empty dir listing -> used by the bridge's readDir (.listing is a JS
-        # handshake in dev; return [] so a statically-served tree behaves).
+        # Live dir listing for the bridge's readDir() (fixed in v0.1.1 — this used
+        # to hardcode `[]` for /plugins and 404 for /desktop-plugins regardless of
+        # what was actually mounted). An exact-match location always wins over the
+        # /plugins/ and /desktop-plugins/ alias blocks above, so these still see
+        # the real ${HERMES_HOME} directories. nginx's built-in autoindex (JSON
+        # format) lists them at request time — same live behavior as the dev
+        # middleware in vite.config.ts, which emits the same [{name,type}] shape.
         location = /plugins/.listing {
-            return 200 '[]';
-            default_type application/json;
+            alias ${HERMES_HOME}/plugins/;
+            index "";
+            autoindex on;
+            autoindex_format json;
+        }
+        location = /desktop-plugins/.listing {
+            alias ${HERMES_HOME}/desktop-plugins/;
+            index "";
+            autoindex on;
+            autoindex_format json;
         }
 
         # SPA fallback: any unknown route serves the app shell (hash-routed SPA).

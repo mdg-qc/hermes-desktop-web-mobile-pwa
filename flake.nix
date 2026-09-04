@@ -60,7 +60,7 @@
         # `nix build .#` → result/ = the built web dist, nothing else.
         packages.default = pkgs.stdenv.mkDerivation {
           pname = "hermes-web";
-          version = "0.1.0";
+          version = "0.1.1";
 
           inherit src;
 
@@ -80,7 +80,7 @@
           # hash — paste it into pnpmDeps.hash and rebuild.
           pnpmDeps = pkgs.fetchPnpmDeps {
             pname = "hermes-web";
-            version = "0.1.0";
+            version = "0.1.1";
             # v4: current fetcher for pnpm 11 (26.11+). Output is a pnpm
             # store dir (+ reproducible tarball), consumed via
             # `pnpm config set store-dir` in buildPhase.

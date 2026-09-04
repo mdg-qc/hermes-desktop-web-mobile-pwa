@@ -160,3 +160,32 @@ and `v*` tags. Build context is excluded of `.env`, `node_modules`, `dist`,
 The repo is meant to be committed (a flake needs git-tracked sources), for
 example under your own fork or a fresh repo. Upstream never writes to these
 paths, so nothing conflicts.
+
+## Changelog
+
+### v0.1.1
+
+Fixes from a security/correctness pass (still AI-reviewed only — see the
+provenance note above):
+
+- **Fixed: plugin listing was broken in the Docker/nginx build.**
+  `nginx.conf.template` used to hardcode `/plugins/.listing` to always return
+  `[]` and had no rule at all for `/desktop-plugins/.listing` (it fell through
+  to a 404). In production this meant the "installed plugins" browser
+  (`readDir()` in `src/web-bridge/bridge.ts`) always reported empty or errored,
+  no matter what was actually mounted at `HERMES_HOME` — silently diverging
+  from the `vite dev` middleware, which does a real listing. Both `.listing`
+  endpoints now use nginx's built-in `autoindex` (JSON format) to list the
+  mounted directory live, at request time, matching dev behavior.
+  `docker-entrypoint.sh` also `mkdir -p`s the two plugin directories on
+  startup so a fresh/empty mount reports `[]` instead of 404ing. Since both
+  `.listing` endpoints now return richer `{name, type}` entries (nginx
+  autoindex's native JSON shape) instead of bare name strings, the `vite dev`
+  middleware (`vite.config.ts`) emits the same shape, and `readDir()` in
+  `bridge.ts` parses it — keeping dev and production on one format.
+- **Fixed: a path-prefix boundary bug in the plugin-root guard.** The web
+  bridge's `readFileText`/`readDir` gated access with
+  `filePath.startsWith(root)`, where `root` (e.g. `.../desktop-plugins`) has
+  no trailing slash — so a sibling path like `.../desktop-pluginsSecret` would
+  incorrectly pass as "under" the plugin root. Replaced with
+  `isUnderPluginRoot()`, which requires an exact match or a `/` boundary.

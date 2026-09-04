@@ -102,6 +102,10 @@ const hermesPluginsAssets = () => {
         const rel = (req.url ?? '').split('?')[0].replace(/^\/+/, '')
 
         if (rel === '.listing') {
+          // Shape matches production: nginx.conf.template serves this same
+          // endpoint via its built-in autoindex (JSON format), which emits
+          // {name,type} objects rather than bare name strings — see the
+          // `readDir` bridge code in web-bridge/bridge.ts.
           fs.readdir(dir, { withFileTypes: true }, (err: unknown, entries) => {
             if (err) {
               res.setHeader('Content-Type', 'application/json')
@@ -109,7 +113,11 @@ const hermesPluginsAssets = () => {
               return
             }
             res.setHeader('Content-Type', 'application/json')
-            res.end(JSON.stringify(entries.filter(e => e.isDirectory()).map(e => e.name)))
+            res.end(
+              JSON.stringify(
+                entries.filter(e => e.isDirectory()).map(e => ({ name: e.name, type: 'directory' }))
+              )
+            )
           })
           return
         }
