@@ -894,9 +894,33 @@ export function createWebBridge(): Window['hermesDesktop'] {
       }
     },
     saveImageFromUrl: async url => {
-      const opened = window.open(url, '_blank', 'noopener')
+      // A browser can't hand bytes to the OS save dialog the way Electron's
+      // main process does, so trigger a native anchor download instead. The
+      // naive `window.open(url, '_blank', ...)` shipped before got popup
+      // blocked (async bridge hop + cross-origin URL) and the browser landed
+      // on about:blank#blocked — worse, it never actually saved the file.
+      try {
+        const response = await fetch(url)
 
-      return Boolean(opened)
+        if (!response.ok) {
+          return false
+        }
+
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = objectUrl
+        link.download = url.split('?')[0].split('/').filter(Boolean).pop() || 'image'
+        link.rel = 'noopener noreferrer'
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000)
+
+        return true
+      } catch {
+        return false
+      }
     },
     saveImageBuffer: async (data, ext) => {
       const bytes = data instanceof Uint8Array ? (data as Uint8Array<ArrayBuffer>) : new Uint8Array(data)
