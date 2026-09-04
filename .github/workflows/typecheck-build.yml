@@ -39,6 +39,9 @@ jobs:
           echo "OK - no TypeScript errors in our code (upstream ../desktop, ../shared noise ignored)."
           exit 0
 
-      # Production build = compile proof, exactly the artifact deploy.sh copies.
-      - name: Build web dist
-        run: nix build .#packages.x86_64-linux.default
+      # Production build is PROVEN by the docker-build workflow (primary image
+      # path: plain pnpm `vite build`). Don't duplicate it here — building the
+      # huge always-latest renderer under the CI nix sandbox is resource-fragile
+      # (rolldown OOM mid-transform). Just verify the flake still evaluates.
+      - name: Flake evaluates
+        run: nix --extra-experimental-features 'nix-command flakes' eval .#packages.x86_64-linux.default.drvPath --no-write-lock-file
