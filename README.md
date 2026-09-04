@@ -1,7 +1,6 @@
 # Hermes Desktop — Web & Mobile (PWA) Version
 
-The official **Hermes Desktop chat UI** as a web app / PWA, plus a **nix-free
-Docker image**. The renderer always builds from the latest `hermes-agent`.
+The **Hermes Desktop chat UI** as a web app / PWA, plus a **Docker image**. The renderer always builds from the latest `hermes-agent`.
 
 > **⚠ Unofficial community version** — this project is **not affiliated with,
 > endorsed by, or a part of** the official `NousResearch/hermes-agent`
@@ -155,20 +154,6 @@ Publishing: `.github/workflows/docker-build.yml` builds `linux/amd64` +
 `linux/arm64` on GitHub Actions and pushes `ghcr.io/<owner>/<repo>` on `main`
 and `v*` tags. Build context is excluded of `.env`, `node_modules`, `dist`,
 `apps/desktop`, `apps/shared` via `.dockerignore`.
-
-## Errors / self‑repair via Hermes
-
-If something breaks — an error, a button that does not react, something that
-fails to start, a chat that hangs — **paste the error / describe the symptom**
-to the **Hermes** agent (on the VPS) and ask for a fix. Hermes reviews the code
-and config, **finds the root cause and fixes it**, then **rebuilds and reloads
-the web/docker** — that should be enough.
-
-Self‑repair loop:
-1. Send the problem to Hermes: “X doesn't work — error: …"
-2. Hermes diagnoses (container logs, nginx, code) and fixes it.
-3. Rebuild image / web + `docker restart` (reload).
-4. Re‑verify via `https://prod-server.emu-nessie.ts.net:8444/` (HTTPS).
 
 ## Git model
 
