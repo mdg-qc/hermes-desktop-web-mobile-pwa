@@ -22,10 +22,22 @@ jobs:
       # tsc is NOT run by the vite build, so run it explicitly (same dev shell
       # the skill documents). pnpm install pulls the dependency closure; the
       # fitler in flake.nix drops node_modules from the build source anyway.
-      - name: Typecheck
+      - name: Typecheck (our code only)
         run: |
           nix develop -c pnpm install --frozen-lockfile
-          nix develop -c pnpm --filter web-desktop run typecheck
+          # tsc typechecks the WHOLE upstream renderer, which drifts with the
+          # always-latest hermes pin and reports upstream-only errors (implicit
+          # any, missing vitest, missing @hermes/shared/translucency) that do
+          # NOT block the vite build. Fail only on OUR files (apps/web-desktop/src).
+          set +e
+          nix develop -c pnpm --filter web-desktop run typecheck 2>&1 | tee /tmp/tsc.log
+          if grep -E '^src/' /tmp/tsc.log | grep -q 'error TS'; then
+            echo "::error::TypeScript errors in our code (apps/web-desktop/src):"
+            grep -E '^src/' /tmp/tsc.log | grep 'error TS'
+            exit 1
+          fi
+          echo "OK - no TypeScript errors in our code (upstream ../desktop, ../shared noise ignored)."
+          exit 0
 
       # Production build = compile proof, exactly the artifact deploy.sh copies.
       - name: Build web dist
