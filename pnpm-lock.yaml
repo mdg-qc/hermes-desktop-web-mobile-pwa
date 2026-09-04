@@ -103,6 +103,9 @@ importers:
       '@xterm/xterm':
         specifier: 6.0.0
         version: 6.0.0
+      blobatar:
+        specifier: 2.0.0
+        version: 2.0.0(react@19.2.7)
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -121,6 +124,9 @@ importers:
       dompurify:
         specifier: 3.4.13
         version: 3.4.13
+      driver.js:
+        specifier: 1.8.0
+        version: 1.8.0
       emojibase-data:
         specifier: 16.0.3
         version: 16.0.3(emojibase@17.0.0)
@@ -2615,6 +2621,14 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  blobatar@2.0.0:
+    resolution: {integrity: sha512-46STsjELfKv5hnnRYsWKgN1vlWFkaewSkwnqRRnptCD+LwxejfyXs1lYwek4fkwAtGrXabmJHP4fpzDxjnqAEg==}
+    peerDependencies:
+      react: '>=18'
+    peerDependenciesMeta:
+      react:
+        optional: true
+
   brace-expansion@1.1.18:
     resolution: {integrity: sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==}
 
@@ -2994,6 +3008,9 @@ packages:
   domutils@4.0.2:
     resolution: {integrity: sha512-qI4JLRKnSzqFqr7hAlS5xQDusBCjKSEG4t4+7aNrIQMHBcsC2TGEhuyABJdYkgSewL57PNLYEiibY2iPKhKpaA==}
     engines: {node: '>=20.19.0'}
+
+  driver.js@1.8.0:
+    resolution: {integrity: sha512-+8/IO7h1v14IzWh2GP60N7T3PFZweXwdn5e5POuxRSBoCYUojsBxzqawPeXh3YZIibRy7EehYNEyxe7slwwtdg==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -7788,6 +7805,10 @@ snapshots:
 
   baseline-browser-mapping@2.11.13: {}
 
+  blobatar@2.0.0(react@19.2.7):
+    optionalDependencies:
+      react: 19.2.7
+
   brace-expansion@1.1.18:
     dependencies:
       balanced-match: 1.0.2
@@ -8208,6 +8229,8 @@ snapshots:
       dom-serializer: 3.1.1
       domelementtype: 3.0.0
       domhandler: 6.0.1
+
+  driver.js@1.8.0: {}
 
   dunder-proto@1.0.1:
     dependencies:

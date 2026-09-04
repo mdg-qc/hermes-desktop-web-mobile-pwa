@@ -491,17 +491,42 @@ export default defineConfig(({ command, mode }) => {
     // (nix develop); realpathing them would make Vite look for node_modules
     // under the read-only store path and fail to resolve bare imports.
     preserveSymlinks: true,
-    alias: {
-      '@/debug/dev-only': debugEntry(command, process.env as Record<string, string>),
-      '@': path.resolve(__dirname, '../desktop/src'),
-      '@hermes/plugin-sdk': path.resolve(__dirname, '../desktop/src/sdk/index.ts'),
-      '@hermes/shared/billing': path.resolve(__dirname, '../shared/src/billing-types.ts'),
-      '@hermes/shared': path.resolve(__dirname, '../shared/src'),
-      react: path.resolve(__dirname, '../../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../../node_modules/react-dom'),
-      'react/jsx-dev-runtime': path.resolve(__dirname, '../../node_modules/react/jsx-dev-runtime.js'),
-      'react/jsx-runtime': path.resolve(__dirname, '../../node_modules/react/jsx-runtime.js')
-    },
+    alias: [
+      { find: '@/debug/dev-only', replacement: debugEntry(command, process.env as Record<string, string>) },
+      { find: '@hermes/plugin-sdk', replacement: path.resolve(__dirname, '../desktop/src/sdk/index.ts') },
+      { find: '@hermes/shared/billing', replacement: path.resolve(__dirname, '../shared/src/billing-types.ts') },
+      { find: '@hermes/shared', replacement: path.resolve(__dirname, '../shared/src') },
+      { find: '@', replacement: path.resolve(__dirname, '../desktop/src') },
+      {
+        find: 'react/jsx-dev-runtime',
+        replacement: path.resolve(__dirname, '../../node_modules/react/jsx-dev-runtime.js')
+      },
+      {
+        find: 'react/jsx-runtime',
+        replacement: path.resolve(__dirname, '../../node_modules/react/jsx-runtime.js')
+      },
+      {
+        find: 'react-dom',
+        replacement: path.resolve(__dirname, '../../node_modules/react-dom')
+      },
+      {
+        find: 'react',
+        replacement: path.resolve(__dirname, '../../node_modules/react')
+      },
+      // driver.js's exports field doesn't expose the .iife subpath that
+      // preview-tour.ts fetches (as ?raw) for the guest-page tour engine; alias
+      // it straight to the on-disk file so the web build resolves it.
+      {
+        find: /^driver\.js\/dist\/driver\.js\.iife\.js(\?raw)?$/,
+        // Keep the ?raw query ($1) so the file is imported as raw text (the
+        // guest-page tour injects the IIFE payload), not parsed as a module.
+        replacement:
+          path.resolve(
+            __dirname,
+            '../../node_modules/driver.js/dist/driver.js.iife.js'
+          ) + '$1'
+      }
+    ],
     dedupe: ['react', 'react-dom', 'react-router']
   },
   server: {

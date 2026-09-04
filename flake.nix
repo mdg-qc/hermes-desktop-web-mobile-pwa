@@ -128,9 +128,9 @@
           '';
         };
       })) // {
-    # Moduł home-manager definiujący trwałą usługę systemd Hermes Web
-    # (production preview renderera Hermes Desktop na :4174). Wpięcie w
-    # głównym nix-config:
+    # Home-manager module defining the persistent Hermes Web systemd service
+    # (production preview of the Hermes Desktop renderer on :4174). Wiring into
+    # the main nix-config:
     #   imports = [ inputs.hermes-mobile.homeManagerModules.hermes-web ];
     #   services.hermes-web.enable = true;
     homeManagerModules = {

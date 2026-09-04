@@ -4,6 +4,7 @@ dist/
 result/
 .env
 *.log
+PLAN.md
 
 # Renderer sources mounted by `nix develop` from the pinned upstream input
 # (never committed — they come from the flake input at dev/build time).

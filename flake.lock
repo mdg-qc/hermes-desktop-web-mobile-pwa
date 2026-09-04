@@ -21,11 +21,11 @@
     "hermes": {
       "flake": false,
       "locked": {
-        "lastModified": 1786793006,
-        "narHash": "sha256-r2urvzt9/UXo+ApysYDyLf5+PvLbg7G3VVpPhqOSGwY=",
+        "lastModified": 1788438011,
+        "narHash": "sha256-3qXLnmqe4wU8eMDPcS0JKMVYJ+rfAE57gJIwE/arW08=",
         "owner": "NousResearch",
         "repo": "hermes-agent",
-        "rev": "c9a806e9d2582aa1abfcb8eff305b9c0f2a6e62b",
+        "rev": "63279301bcbdc185c1b07b98a9312eb0c862f26d",
         "type": "github"
       },
       "original": {

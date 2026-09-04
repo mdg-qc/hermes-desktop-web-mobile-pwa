@@ -2,7 +2,7 @@
   "name": "hermes-mobile",
   "private": true,
   "version": "0.1.0",
-  "description": "Hermes Web — the Hermes Desktop chat UI as a browser app. Contains only the web code + nix flake; hermes-agent renderer sources are fetched by nix at build/dev time.",
+  "description": "Hermes Desktop — Web & Mobile (PWA) version. Official Hermes chat UI as a browser/PWA app; nix-free Docker build.",
   "scripts": {
     "dev": "pnpm --filter web-desktop run dev",
     "build": "pnpm --filter web-desktop run build",

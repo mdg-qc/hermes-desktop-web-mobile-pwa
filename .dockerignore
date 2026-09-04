@@ -1,0 +1,17 @@
+# Hermes Web docker build context — keep it minimal so the pnpm build only sees
+# source, never local secrets/artifacts/upstream symlinks.
+**/node_modules
+**/.vite
+**/dist
+**/logs
+result
+.env
+apps/desktop
+apps/shared
+*.log
+.git
+.gitignore
+.github
+PLAN.md
+*.md.bak
+.obsidian

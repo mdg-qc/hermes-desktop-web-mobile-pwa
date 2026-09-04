@@ -599,6 +599,22 @@ type WebBridge = Omit<Window['hermesDesktop'], 'terminal' | 'git' | 'zoom'>
 export function createWebBridge(): Window['hermesDesktop'] {
   const bridge: WebBridge = {
     getConnection: async profile => connection(profile),
+    // Single-gateway web: every profile is served by the live connection.
+    getProfileRoutes: async profiles =>
+      profiles.map(name => ({
+        connectionId: 'web-single',
+        mode: 'remote',
+        profile: name,
+        targetProfile: name
+      })),
+    // Web has no spawn pool; report the default UI values (Settings rows read them).
+    getPoolLimits: async () => ({ maxBackends: 3, idleMs: 10 * 60_000 }),
+    setPoolLimits: async () => ({ ok: true, limits: { maxBackends: 3, idleMs: 10 * 60_000 } }),
+    openBrowserWindow: async () => ({ ok: false, error: 'no browser pop-out in the web app' }),
+    onBrowserPopoutClosed: unsubscribed,
+    // No OS keychain in the browser; secrets encryption stays off.
+    getSecretStorageEncryption: async () => ({ on: false }),
+    setSecretStorageEncryption: async () => ({ on: false }),
     revalidateConnection: async () => ({ ok: true, rebuilt: false }),
     touchBackend: async () => ({ ok: true }),
     // Single window in the browser: always the first to claim a cue.
@@ -672,6 +688,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     // second OS window in a browser, so open/close navigate to/from that view
     // in-place; the rest of the API is a no-op (no window controls in web).
     hud: {
+      nativeDrag: true,
       open: async request => {
         const hash = request?.sessionId ? `#/${encodeURIComponent(request.sessionId)}` : ''
         window.location.href = `${window.location.pathname}?win=hud${hash}`
@@ -684,13 +701,17 @@ export function createWebBridge(): Window['hermesDesktop'] {
         return { ok: true }
       },
       setIgnoreMouse: noop,
+      beginMove: noop,
+      endMove: noop,
       moveBy: noop,
       setBounds: noop,
-      setVibrancy: async () => ({ ok: true }),
+      resetLayout: async () => ({ ok: true }),
+      setFrost: async () => ({ ok: true }),
       setSession: noop,
       onGoto: unsubscribed,
       onChanged: unsubscribed,
-      onCursor: unsubscribed
+      onCursor: unsubscribed,
+      onGameOverlay: unsubscribed
     },
     getBootProgress: async () => readyBootProgress(),
     getConnectionConfig: async () => toConnectionConfig(loadStoredConnection()),
@@ -781,6 +802,8 @@ export function createWebBridge(): Window['hermesDesktop'] {
     },
     profile: {
       get: async () => ({ profile: null }),
+      // Web has no persistent "next-launch" profile; echo the current (null) one.
+      remember: async name => ({ profile: name }),
       set: async name => ({ profile: name })
     },
     sshConfigHosts: async () => ({ hosts: [] }),
