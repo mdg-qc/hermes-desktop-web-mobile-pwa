@@ -76,6 +76,17 @@ const unsubscribed = (): (() => void) => noop
 const pluginRoots = () => [`${servingBase()}/desktop-plugins`, `${servingBase()}/plugins`]
 
 /**
+ * True when `path` is one of the plugin roots itself, or something under it.
+ * A plain `path.startsWith(root)` (the previous check) is a string-prefix
+ * bug: a sibling path like `${root}Secret` also starts with `root`, since
+ * `root` carries no trailing slash. Require an exact match or a `/`
+ * boundary so a sibling directory can't pass as "under" a plugin root.
+ */
+function isUnderPluginRoot(path: string): boolean {
+  return pluginRoots().some(root => path === root || path.startsWith(`${root}/`))
+}
+
+/**
  * Browser-file registry. The renderer is path-based: in Electron it reads a
  * file off disk by absolute path. A browser has no paths — only File/Blob
  * objects from `<input type=file>`, drop/paste events and the clipboard — so
@@ -847,7 +858,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
       set: async maxMb => ({ defaultMaxMb: 25, maxBytes: maxMb * 1024 * 1024, maxMb })
     },
     readFileText: async filePath => {
-      if (!pluginRoots().some(root => filePath.startsWith(root))) {
+      if (!isUnderPluginRoot(filePath)) {
         throw new Error('local file access is unavailable in the web app')
       }
 
@@ -974,7 +985,7 @@ export function createWebBridge(): Window['hermesDesktop'] {
     },
     trashPath: async () => false,
     readDir: async dir => {
-      if (!pluginRoots().some(root => dir.startsWith(root))) {
+      if (!isUnderPluginRoot(dir)) {
         return { entries: [], error: 'local file access is unavailable in the web app' }
       }
 
