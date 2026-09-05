@@ -69,9 +69,10 @@ const noop = (): void => {}
 const unsubscribed = (): (() => void) => noop
 
 /**
- * Plugin folders are served by the dev/preview middleware at same-origin URLs
- * (/desktop-plugins and /plugins), each with a `.listing` endpoint returning a
- * JSON array of subdirectory names.
+ * Plugin folders are served by the dev/preview middleware (and, in
+ * production, nginx — see nginx.conf.template) at same-origin URLs
+ * (/desktop-plugins and /plugins), each with a `.listing` endpoint returning
+ * a JSON array of `{name, type}` entries for the directory's children.
  */
 const pluginRoots = () => [`${servingBase()}/desktop-plugins`, `${servingBase()}/plugins`]
 
@@ -993,7 +994,13 @@ export function createWebBridge(): Window['hermesDesktop'] {
 
       if (!res.ok) {return { entries: [], error: `${res.status}: ${res.statusText}` }}
 
-      const names = (await res.json()) as string[]
+      // {name,type} objects: the dev middleware (vite.config.ts) and nginx's
+      // built-in autoindex (nginx.conf.template, production) both emit this
+      // shape; only directory entries are listed.
+      const raw = (await res.json()) as Array<{ name?: string; type?: string }>
+      const names = raw
+        .filter(e => e && e.type === 'directory' && e.name && e.name !== '.' && e.name !== '..')
+        .map(e => e.name as string)
 
       return { entries: names.map(name => ({ name, path: `${dir}/${name}`, isDirectory: true })) }
     },

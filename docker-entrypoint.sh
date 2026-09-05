@@ -18,6 +18,11 @@ fi
 : "${HERMES_GATEWAY_URL:=http://127.0.0.1:9119}"
 : "${HERMES_HOME:=/data/hermes}"
 
+# So nginx's autoindex .listing endpoints (nginx.conf.template) see a real,
+# empty directory instead of 404ing when the plugin dirs haven't been created
+# yet on a fresh mount. Best-effort: don't fail startup on a read-only mount.
+mkdir -p "${HERMES_HOME}/plugins" "${HERMES_HOME}/desktop-plugins" 2>/dev/null || true
+
 [ -f /etc/nginx/nginx.conf ] || cp /etc/nginx/nginx.conf.template /etc/nginx/nginx.conf
 
 envsubst '$HERMES_GATEWAY_URL $HERMES_HOME' \
