@@ -54,20 +54,20 @@ http {
 
         # Live dir listing for the bridge's readDir() (fixed in v0.1.1 — this used
         # to hardcode `[]` for /plugins and 404 for /desktop-plugins regardless of
-        # what was actually mounted). nginx autoindex requires a request URI ending
-        # in '/', so an exact-match `/plugins/.listing` would 301 to a trailing
-        # slash and then fall through to the alias blocks above (404). Instead we
-        # redirect `.listing` to `.listing/` and serve the trailing-slash form with
-        # nginx's built-in autoindex (JSON) against the real ${HERMES_HOME}
-        # directory — the same live behavior and [{name,type}] shape as the dev
-        # middleware in vite.config.ts.
-        location = /plugins/.listing { return 302 /plugins/.listing/; }
+        # what was actually mounted). nginx autoindex only answers URIs ending in
+        # '/', so we internally rewrite each `.listing` request to its trailing-
+        # slash form and serve that via nginx's built-in autoindex (JSON) against
+        # the real ${HERMES_HOME} directory — the same [{name,type}] shape as the
+        # dev middleware in vite.config.ts. Using an internal `rewrite ... last`
+        # (not an external redirect) avoids emitting a Location header, which
+        # could point at the wrong scheme/port when nginx sits behind a proxy.
+        location = /plugins/.listing { rewrite ^ /plugins/.listing/ last; }
         location = /plugins/.listing/ {
             alias ${HERMES_HOME}/plugins/;
             autoindex on;
             autoindex_format json;
         }
-        location = /desktop-plugins/.listing { return 302 /desktop-plugins/.listing/; }
+        location = /desktop-plugins/.listing { rewrite ^ /desktop-plugins/.listing/ last; }
         location = /desktop-plugins/.listing/ {
             alias ${HERMES_HOME}/desktop-plugins/;
             autoindex on;

@@ -177,9 +177,10 @@ provenance note above):
   from the `vite dev` middleware, which does a real listing. Both `.listing`
   endpoints now serve nginx's built-in `autoindex` (JSON format) to list the
   mounted directory live, at request time, matching dev behavior. (Because
-  `autoindex` only answers URIs ending in `/`, each `.listing` endpoint
-  302-redirects to the same path with a trailing slash, which is then served
-  by `autoindex`.) `docker-entrypoint.sh` also `mkdir -p`s the two plugin
+  `autoindex` only answers URIs ending in `/`, each `.listing` endpoint is
+  internally rewritten to the same path with a trailing slash, which is then
+  served by `autoindex` — no external redirect, so no scheme/port issues
+  behind a proxy.) `docker-entrypoint.sh` also `mkdir -p`s the two plugin
   directories on startup so a fresh/empty mount reports `[]` instead of
   404ing. Since both `.listing` endpoints now return richer `{name, type}` entries (nginx
   autoindex's native JSON shape) instead of bare name strings, the `vite dev`
