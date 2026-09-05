@@ -54,20 +54,22 @@ http {
 
         # Live dir listing for the bridge's readDir() (fixed in v0.1.1 — this used
         # to hardcode `[]` for /plugins and 404 for /desktop-plugins regardless of
-        # what was actually mounted). An exact-match location always wins over the
-        # /plugins/ and /desktop-plugins/ alias blocks above, so these still see
-        # the real ${HERMES_HOME} directories. nginx's built-in autoindex (JSON
-        # format) lists them at request time — same live behavior as the dev
-        # middleware in vite.config.ts, which emits the same [{name,type}] shape.
-        location = /plugins/.listing {
+        # what was actually mounted). nginx autoindex requires a request URI ending
+        # in '/', so an exact-match `/plugins/.listing` would 301 to a trailing
+        # slash and then fall through to the alias blocks above (404). Instead we
+        # redirect `.listing` to `.listing/` and serve the trailing-slash form with
+        # nginx's built-in autoindex (JSON) against the real ${HERMES_HOME}
+        # directory — the same live behavior and [{name,type}] shape as the dev
+        # middleware in vite.config.ts.
+        location = /plugins/.listing { return 302 /plugins/.listing/; }
+        location = /plugins/.listing/ {
             alias ${HERMES_HOME}/plugins/;
-            index "";
             autoindex on;
             autoindex_format json;
         }
-        location = /desktop-plugins/.listing {
+        location = /desktop-plugins/.listing { return 302 /desktop-plugins/.listing/; }
+        location = /desktop-plugins/.listing/ {
             alias ${HERMES_HOME}/desktop-plugins/;
-            index "";
             autoindex on;
             autoindex_format json;
         }

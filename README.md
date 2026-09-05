@@ -175,11 +175,13 @@ provenance note above):
   (`readDir()` in `src/web-bridge/bridge.ts`) always reported empty or errored,
   no matter what was actually mounted at `HERMES_HOME` — silently diverging
   from the `vite dev` middleware, which does a real listing. Both `.listing`
-  endpoints now use nginx's built-in `autoindex` (JSON format) to list the
-  mounted directory live, at request time, matching dev behavior.
-  `docker-entrypoint.sh` also `mkdir -p`s the two plugin directories on
-  startup so a fresh/empty mount reports `[]` instead of 404ing. Since both
-  `.listing` endpoints now return richer `{name, type}` entries (nginx
+  endpoints now serve nginx's built-in `autoindex` (JSON format) to list the
+  mounted directory live, at request time, matching dev behavior. (Because
+  `autoindex` only answers URIs ending in `/`, each `.listing` endpoint
+  302-redirects to the same path with a trailing slash, which is then served
+  by `autoindex`.) `docker-entrypoint.sh` also `mkdir -p`s the two plugin
+  directories on startup so a fresh/empty mount reports `[]` instead of
+  404ing. Since both `.listing` endpoints now return richer `{name, type}` entries (nginx
   autoindex's native JSON shape) instead of bare name strings, the `vite dev`
   middleware (`vite.config.ts`) emits the same shape, and `readDir()` in
   `bridge.ts` parses it — keeping dev and production on one format.
