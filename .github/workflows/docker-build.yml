@@ -24,27 +24,52 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Bramka dla `schedule` (cron jest w UTC, a budujemy o 05:00 czasu polskiego).
-  # Dla push/tag/dispatch przepuszcza od razu.
+  # Bramka dla `schedule`. Cron GitHuba chodzi w UTC, a budujemy raz w tygodniu
+  # o 05:00 czasu polskiego — a do tego cron realnie się opóźnia (obserwowane 4-6 h),
+  # więc warunek „godzina == 05" sam by wszystko wycinał. Bramka puszcza build, gdy
+  # w ostatnich 6 dniach NIE było realnej pracy tego workflow (push też się liczy
+  # → nie budujemy drugi raz tego samego).
   guard:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read          # przegląd historii przebiegów (gh run list / gh run view)
     outputs:
       run: ${{ steps.check.outputs.run }}
     steps:
       - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ "${{ github.event_name }}" != "schedule" ]; then
-            echo "run=1" >> "$GITHUB_OUTPUT"
+            echo "run=1" >> "$GITHUB_OUTPUT"   # push / tag / dispatch — bez kombinowania
             exit 0
           fi
-          NOW="$(TZ=Europe/Warsaw date '+%H:%M (%a)')"
+
+          NOW="$(TZ=Europe/Warsaw date '+%Y-%m-%d %H:%M (%a)')"
           HOUR="$(TZ=Europe/Warsaw date '+%H')"
           echo "Europe/Warsaw: $NOW"
-          if [ "$HOUR" = "05" ]; then
-            echo "run=1" >> "$GITHUB_OUTPUT"
-          else
+
+          # Czy w ostatnich 6 dniach był przebieg, który NAPRAWDĘ budował?
+          # (przebieg pominięty przez bramkę ma same joby `skipped`)
+          CUTOFF=$(( $(date -u +%s) - 6*24*3600 ))
+          RECENT=0
+          while read -r rid ts; do
+            [ "$rid" = "${{ github.run_id }}" ] && continue
+            [ "$(date -u -d "$ts" +%s)" -ge "$CUTOFF" ] || continue
+            jobs="$(gh run view "$rid" --repo "${{ github.repository }}" --json jobs --jq '[.jobs[] | select(.name != "guard" and .conclusion != "skipped")] | length' 2>/dev/null || echo 0)"
+            if [ "${jobs:-0}" -gt 0 ]; then RECENT=1; break; fi
+          done < <(gh run list --repo "${{ github.repository }}" --workflow docker-build.yml \
+                     --limit 30 --json databaseId,createdAt --jq '.[]|"\(.databaseId) \(.createdAt)"')
+
+          if [ "$HOUR" -lt 5 ]; then
             echo "run=0" >> "$GITHUB_OUTPUT"
-            echo "::notice::Pomijam build — cron trafił w $NOW, a budujemy o 05:00 Europe/Warsaw."
+            echo "::notice::Pomijam — teraz $NOW, a budujemy dopiero od 05:00 Europe/Warsaw."
+          elif [ "$RECENT" = "1" ]; then
+            echo "run=0" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pomijam — w ostatnich 6 dniach już budowano (jeden przebieg na tydzień)."
+          else
+            echo "run=1" >> "$GITHUB_OUTPUT"
+            echo "Buduję: $NOW (jeden przebieg w tym tygodniu)."
           fi
 
   build:
