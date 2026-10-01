@@ -6,20 +6,50 @@ name: docker-build
 # a normal `docker build` in CI and locally. The container only serves static
 # files + proxies to a gateway.
 #
-# Triggers: push to main, v* tags, manual dispatch, AND a DAILY 05:00 UTC build
-# so the image keeps tracking new upstream hermes-agent even with no pushes.
+# Triggers: push to main, v* tags, manual dispatch, AND a WEEKLY rebuild on
+# Saturday at 05:00 Polish time (the `guard` job picks the right UTC cron, so it
+# runs exactly once a week — no repeats) so the image keeps tracking new upstream
+# hermes-agent even with no pushes.
 
 on:
   push:
     branches: [main]
     tags: ['v*']
   schedule:
-    # Rebuild every day at 05:00 UTC to pick up the latest upstream hermes-agent.
-    - cron: '0 5 * * *'
+    # RAZ W TYGODNIU: sobota 05:00 czasu polskiego. GitHub Actions cron chodzi tylko
+    # w UTC, a Polska ma CEST/CET (zmiana czasu) → dwa wpisy pokrywają obie pory roku;
+    # job `guard` puszcza DOKŁADNIE JEDEN przebieg — ten o 05:00 Europe/Warsaw.
+    - cron: '0 3 * * 6'   # 03:00 UTC = 05:00 CEST (czas letni)
+    - cron: '0 4 * * 6'   # 04:00 UTC = 05:00 CET  (czas zimowy)
   workflow_dispatch:
 
 jobs:
+  # Bramka dla `schedule` (cron jest w UTC, a budujemy o 05:00 czasu polskiego).
+  # Dla push/tag/dispatch przepuszcza od razu.
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          NOW="$(TZ=Europe/Warsaw date '+%H:%M (%a)')"
+          HOUR="$(TZ=Europe/Warsaw date '+%H')"
+          echo "Europe/Warsaw: $NOW"
+          if [ "$HOUR" = "05" ]; then
+            echo "run=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=0" >> "$GITHUB_OUTPUT"
+            echo "::notice::Pomijam build — cron trafił w $NOW, a budujemy o 05:00 Europe/Warsaw."
+          fi
+
   build:
+    needs: guard
+    if: needs.guard.outputs.run == '1'
     runs-on: ubuntu-latest
     permissions:
       contents: read
